@@ -1,0 +1,122 @@
+Crear DB:
+
+Name: LocalExcercice
+
+create table products idProduct nameProduct descriptionProduct price dateRegistered SKU
+
+create table userSessions id userName userEmail userPassword
+
+
+
+SP´s:
+
+Create Procedure [dbo].[AddProduct](
+	@Name NVARCHAR(100),
+    @Description NVARCHAR(255),
+    @Price FLOAT,
+    @sku NVARCHAR(100)
+) as
+begin
+	insert into dbo.products(idProduct, nameProduct, descriptionProduct, price, dateRegistered, SKU)
+	values(NEWID(), @Name, @Description, @Price, GETDATE(), @sku)
+end
+
+****************************************
+
+create procedure [dbo].[AddUser](
+@Name varchar(100),
+@Email varchar(100),
+@Password varchar(500)
+) as
+
+if (select COUNT(*) from userSessions where userEmail = @Email) > 0 
+begin
+	raiserror('user already exists',16,1)
+	return -1
+end
+else
+begin
+
+declare @passEncrypted varBinary(500)
+set @passEncrypted = ENCRYPTBYPASSPHRASE('Key', @Password)
+
+insert into dbo.userSessions(id, userName, userEmail, userPassword)
+values (NEWID(), @Name, @Email, @passEncrypted)
+
+select ('inser Ok')
+
+end
+
+************************************
+
+create procedure [dbo].[DeleteProduc](
+	@sku varchar(100)
+) as
+begin
+	delete products where SKU = @sku
+end
+
+***************************************
+
+create procedure [dbo].[GetProduct](
+    @sku NVARCHAR(100) = null
+) as
+begin
+	if @sku is null
+	begin
+		select * from products
+	end
+	else
+	begin
+		select * from products where SKU = @sku
+	end
+end
+
+****************************************
+
+create PROCEDURE [dbo].[LogInUser](
+    @Email VARCHAR(100),
+    @Password VARCHAR(500)
+) AS
+BEGIN
+    IF (SELECT COUNT(*) FROM userSessions WHERE userEmail = @Email) = 0 
+    BEGIN
+        RAISERROR('username doesn´t exist', 16, 1)
+        RETURN -1
+    END
+    ELSE
+    BEGIN
+        DECLARE @passEncrypted VARBINARY(500)
+        DECLARE @passDecrypted VARCHAR(500)
+
+        -- Convierte userPassword a VARBINARY antes de asignarlo
+        SELECT @passEncrypted = userPassword FROM userSessions WHERE userEmail = @Email
+
+        SET @passDecrypted = DECRYPTBYPASSPHRASE('Key', @passEncrypted)
+
+        IF (@passDecrypted = @Password)
+        BEGIN
+            SELECT id, userName, userEmail FROM userSessions WHERE userEmail = @Email
+        END
+        ELSE
+        BEGIN
+            RAISERROR('Invalid password', 16, 1)
+            RETURN -1
+        END
+    END
+END
+
+**********************************
+
+create procedure [dbo].[UpdateProduc](
+	@Name NVARCHAR(100),
+    @Description NVARCHAR(255),
+    @Price FLOAT,
+    @sku NVARCHAR(100)
+) as
+begin
+	update products set nameProduct = @Name, descriptionProduct = @Description, price = @Price where SKU = @sku
+end
+
+
+
